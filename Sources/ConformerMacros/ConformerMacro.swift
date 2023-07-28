@@ -39,15 +39,33 @@ public struct SupamodeledMacro: ConformanceMacro, MemberMacro {
         else {
             return ["MARK: Add the variable columns to your struct. var columns: [any TableColumnProtocol] = [* Add Each Column in your table to the array *]"]
         }
+        var newVariables: [(name: String,type: String)] = []
         //MARK: Add Variables to Code
         let variables = elements.compactMap{ element in
-            guard let argumentList = element.expression.as(FunctionCallExprSyntax.self)?.argumentList,
-                  let name = argumentList.first?.expression.as(StringLiteralExprSyntax.self)?.segments.first?.as(StringSegmentSyntax.self)?.content.text
-            else { return ""}
-            if let value = argumentList.first(where: {$0.label?.text == "valueType"})?.expression.as(MemberAccessExprSyntax.self)?.base?.as(IdentifierExprSyntax.self)?.identifier.text{
-                return "var \(name): \(value)"
-            }else if let value = argumentList.first(where: {$0.label?.text == "valueType"})?.expression.as(MemberAccessExprSyntax.self)?.base?.as(OptionalChainingExprSyntax.self)?.expression.as(IdentifierExprSyntax.self)?.identifier.text{
-                return "var \(name): \(value)"
+            guard let individualElement = element.expression.as(FunctionCallExprSyntax.self),
+                  let individualType = individualElement.calledExpression.as(IdentifierExprSyntax.self)?.identifier.text,
+                  let argumentList = element.expression.as(FunctionCallExprSyntax.self)?.argumentList,
+                  let name = argumentList.first?.expression.as(StringLiteralExprSyntax.self)?.segments.first?.as(StringSegmentSyntax.self)?.content.text,
+                  let valueDecl = argumentList.first(where: {$0.label?.text == "valueType"})?.expression.as(MemberAccessExprSyntax.self)?.base
+            else { return "" }
+            //Check if the Column is Foreign Key or Normal
+            switch individualType{
+            case "ForeignKeyColumn":
+                if let value = valueDecl.as(IdentifierExprSyntax.self)?.identifier.text{
+//                    newVariables.append((name: name, type: value))
+                    return "static let \(name) = hasMany(\(value).self)"
+                }else if let value = valueDecl.as(OptionalChainingExprSyntax.self)?.expression.as(IdentifierExprSyntax.self)?.identifier.text{
+//                    newVariables.append((name: name, type: value))
+                    return "static let \(name) = hasMany(\(value).self)"
+                }
+            default:
+                if let value = valueDecl.as(IdentifierExprSyntax.self)?.identifier.text{
+                    newVariables.append((name: name, type: value))
+                    return "var \(name): \(value)"
+                }else if let value = valueDecl.as(OptionalChainingExprSyntax.self)?.expression.as(IdentifierExprSyntax.self)?.identifier.text{
+                    newVariables.append((name: name, type: value))
+                    return "var \(name): \(value)"
+                }
             }
             return ""
         }
@@ -57,6 +75,11 @@ public struct SupamodeledMacro: ConformanceMacro, MemberMacro {
                 \(raw: columnMembers.decl.debugDescription)
                 """
         ]
+    }
+    
+    private static func conformToCodable(_ elements: MemberDeclListSyntax.Element) -> String {
+        
+        return ""
     }
     
 }
