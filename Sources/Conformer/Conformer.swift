@@ -9,3 +9,7 @@
 /// produces a tuple `(x + y, "x + y")`.
 @freestanding(expression)
 public macro stringify<T>(_ value: T) -> (T, String) = #externalMacro(module: "ConformerMacros", type: "StringifyMacro")
+
+@attached(conformance)
+@attached(member, names: arbitrary)
+public macro Supamodeled() = #externalMacro(module: "ConformerMacros", type: "SupamodeledMacro")
