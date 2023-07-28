@@ -39,13 +39,14 @@ public struct SupamodeledMacro: ConformanceMacro, MemberMacro {
         else {
             return ["MARK: Add the variable columns to your struct. var columns: [any TableColumnProtocol] = [* Add Each Column in your table to the array *]"]
         }
+        //MARK: Add Variables to Code
         let variables = elements.compactMap{ element in
             guard let argumentList = element.expression.as(FunctionCallExprSyntax.self)?.argumentList,
                   let name = argumentList.first?.expression.as(StringLiteralExprSyntax.self)?.segments.first?.as(StringSegmentSyntax.self)?.content.text
             else { return ""}
-            if let value = argumentList.last?.expression.as(MemberAccessExprSyntax.self)?.base?.as(IdentifierExprSyntax.self)?.identifier.text{
+            if let value = argumentList.first(where: {$0.label?.text == "valueType"})?.expression.as(MemberAccessExprSyntax.self)?.base?.as(IdentifierExprSyntax.self)?.identifier.text{
                 return "var \(name): \(value)"
-            }else if let value = argumentList.last?.expression.as(MemberAccessExprSyntax.self)?.base?.as(OptionalChainingExprSyntax.self)?.expression.as(IdentifierExprSyntax.self)?.identifier.text{
+            }else if let value = argumentList.first(where: {$0.label?.text == "valueType"})?.expression.as(MemberAccessExprSyntax.self)?.base?.as(OptionalChainingExprSyntax.self)?.expression.as(IdentifierExprSyntax.self)?.identifier.text{
                 return "var \(name): \(value)"
             }
             return ""
@@ -53,6 +54,7 @@ public struct SupamodeledMacro: ConformanceMacro, MemberMacro {
         return [
                 """
                 \(raw: variables.joined(separator: "\n"))
+                \(raw: columnMembers.decl.debugDescription)
                 """
         ]
     }
