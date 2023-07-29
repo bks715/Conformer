@@ -13,10 +13,6 @@ let package = Package(
             name: "Conformer",
             targets: ["Conformer"]
         ),
-        .executable(
-            name: "ConformerClient",
-            targets: ["ConformerClient"]
-        ),
     ],
     dependencies: [
         // Depend on the latest Swift 5.9 prerelease of SwiftSyntax
@@ -37,11 +33,6 @@ let package = Package(
 
         // Library that exposes a macro as part of its API, which is used in client programs.
         .target(name: "Conformer", dependencies: ["ConformerMacros"]),
-
-        // A client of the library, which is able to use the macro in its own code.
-        .executableTarget(name: "ConformerClient", dependencies: ["Conformer",
-            .product(name: "GRDB", package: "GRDB.swift")
-                                                                 ]),
 
         // A test target used to develop the macro implementation.
         .testTarget(
