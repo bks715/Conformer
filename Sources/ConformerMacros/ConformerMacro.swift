@@ -54,8 +54,8 @@ public struct SupamodeledMacro: ConformanceMacro, MemberMacro {
             //Check if the Column is Foreign Key or Normal
             switch individualType{
             case "ForeignKeyColumn":
-                if let name = tableColumn.name, let valueType = tableColumn.valueType{
-                    return "static let \(name) = hasMany(\(valueType).self)"
+                if let name = tableColumn.name, let valueType = tableColumn.valueType, let targetColumn = tableColumn.targetColumn{
+                    return "static let \(name) = hasMany(\(valueType).self)\nvar \(targetColumn): String?"
                 }
             default:
                 if let name = tableColumn.name, let valueType = tableColumn.valueType{
@@ -86,6 +86,12 @@ public struct SupamodeledMacro: ConformanceMacro, MemberMacro {
         var codingKeys: [String] = []
         for element in elements{
             //Create Coding Keys
+            guard element.isForeignKey != true else {
+                //The element is a foreign key
+                guard let name = element.targetColumn ?? element.sourceColumn else { continue }
+                codingKeys.append("case \(name) = \"\(name.camelToSnakeCase)\"")
+                continue
+            }
             guard let name = element.name else { continue }
             codingKeys.append("case \(name) = \"\(name.camelToSnakeCase)\"")
             //Encode
