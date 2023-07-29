@@ -124,7 +124,7 @@ public struct SupamodeledMacro: ConformanceMacro, MemberMacro {
         })
         
         return """
-            static func createTable(_ db: Database) throws {
+            func createTable(_ db: Database) throws {
                 try db.create(table: \(tableName){ t in
                     //Add the Columns
                     \(creationStatements.joined(separator: "\n"))
