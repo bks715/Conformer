@@ -31,12 +31,12 @@ public struct SupamodeledMacro: ConformanceMacro, MemberMacro {
     }
     
     public static func expansion(of node: AttributeSyntax, providingMembersOf declaration: some DeclGroupSyntax, in context: some MacroExpansionContext) throws -> [DeclSyntax] {
-            let structDecl = declaration.cast(StructDeclSyntax.self)
+        let structDecl = declaration.cast(StructDeclSyntax.self)
         
         guard let tableName = structDecl.memberBlock.members.first(where: {
             $0.decl.as(VariableDeclSyntax.self)?.bindings.first?.pattern.as(IdentifierPatternSyntax.self)?.identifier.text == "tableName"
         })?.decl.as(VariableDeclSyntax.self)?.bindings.first?.initializer?.value.description else { return [""] }
-            
+        
         guard let columnMembers = structDecl.memberBlock.members.first(where: {$0.decl.as(VariableDeclSyntax.self)?.bindings.first?.pattern.as(IdentifierPatternSyntax.self)?.identifier.text == "columns" }),
               let columns = columnMembers.decl.as(VariableDeclSyntax.self)?.bindings.first?.initializer?.value.as(FunctionCallExprSyntax.self)?.calledExpression.as(ClosureExprSyntax.self)?.statements,
               let elements = columns.first?.item.as(ReturnStmtSyntax.self)?.expression?.as(ArrayExprSyntax.self)?.elements
@@ -70,6 +70,8 @@ public struct SupamodeledMacro: ConformanceMacro, MemberMacro {
         return [
                 """
                 \(raw: variables.joined(separator: "\n"))
+                var isDeleted: Bool = false
+                var updatedAt: Date?
                 \n
                 \(raw: conformToCodable(tableColumns))
                 \n
@@ -84,14 +86,16 @@ public struct SupamodeledMacro: ConformanceMacro, MemberMacro {
         for element in elements{
             //Create Coding Keys
             guard let name = element.name else { continue }
-            codingKeys.append(name)
+            codingKeys.append("case \(name) = \"\(name.camelToSnakeCase)\"")
             //Encode
             //Decode
             
         }
         return """
                 enum CodingKeys: CodingKey {
-                    case: \(codingKeys.joined(separator: ", "))
+                    \(codingKeys.joined(separator: "\n    "))
+                    case isDeleted = "is_deleted"
+                    case updatedAt = "updated_at"
                 """
     }
     
@@ -102,7 +106,7 @@ public struct SupamodeledMacro: ConformanceMacro, MemberMacro {
             let comma = index == (primaryKeys.count - 1) ? "" : ","
             guard column.isForeignKey == nil, let name = column.name else { return "" }
             return  """
-                \(string) "\(name)"\(comma)
+                \(string) "\(name.camelToSnakeCase)"\(comma)
                 """
         })
         
@@ -113,19 +117,19 @@ public struct SupamodeledMacro: ConformanceMacro, MemberMacro {
                 //Actually Handle Foreign Key Here
                 guard let sourceColumn = column.sourceColumn, let sourceName = column.sourceName, let targetColumn = column.targetColumn else { return nil }
                 return """
-                            t.create("\(targetColumn)", .text)
-                                .references("\(sourceName)", column: "\(sourceColumn)", onDelete: .cascade)
+                            t.create("\(targetColumn.camelToSnakeCase)", .text)
+                                .references("\(sourceName.camelToSnakeCase)", column: "\(sourceColumn.camelToSnakeCase)", onDelete: .cascade)
                     """
             }else{
                 return """
-                            t.create("\(name)", \(grdbType))\(isOptional)
+                            t.create("\(name.camelToSnakeCase)", \(grdbType))\(isOptional)
                        """
             }
         })
         
         return """
             static func createTable(_ db: Database) throws {
-                try db.create(table: \(tableName){ t in
+                try db.create(table: \(tableName.camelToSnakeCase){ t in
                     //Add the Columns
                     \(creationStatements.joined(separator: "\n"))
                     //Add the Primary Keys
@@ -139,6 +143,8 @@ public struct SupamodeledMacro: ConformanceMacro, MemberMacro {
     private func createTableCreationLine() -> String {
         return ""
     }
+    
+    //Make a camel case to snake case function
     
 }
 
