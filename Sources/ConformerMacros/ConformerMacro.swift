@@ -54,16 +54,20 @@ public struct SupamodeledMacro: ConformanceMacro, MemberMacro {
             //Check if the Column is Foreign Key or Normal
             switch individualType{
             case "ForeignKeyColumn":
-                if let name = tableColumn.name, let valueType = tableColumn.valueType, let targetColumn = tableColumn.targetColumn{
-                    return """
-                    static let \(name) = hasMany(\(valueType).self)
-                    var \(targetColumn): String?
-                """
+                if let targetColumn = tableColumn.targetColumn{
+                    return "var \(targetColumn): String?"
                 }
             default:
                 if let name = tableColumn.name, let valueType = tableColumn.valueType{
                     return "var \(name): \(valueType)"
                 }
+            }
+            return ""
+        }
+        
+        let staticVars = tableColumns.filter({$0.isForeignKey == true }).map{ tableColumn in
+            if let name = tableColumn.name, let valueType = tableColumn.valueType{
+                return "static let \(name) = hasMany(\(valueType).self)"
             }
             return ""
         }
@@ -75,6 +79,7 @@ public struct SupamodeledMacro: ConformanceMacro, MemberMacro {
                 \(raw: variables.joined(separator: "\n"))
                 var isDeleted: Bool = false
                 var updatedAt: Date?
+                \(raw: staticVars.joined(separator: "\n"))
                 \n
                 \(raw: conformToCodable(tableColumns))
                 \n
