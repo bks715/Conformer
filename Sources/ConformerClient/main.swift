@@ -6,7 +6,7 @@ import Foundation
 struct TaskThing {
     static var tableName: String = "task_thing"
     var columns: [any TableColumnProtocol] = { return [ TableColumn(name: "id", valueType: String.self, isPrimaryKey: true),
-                                                        TableColumn(name: "name", valueType: String.self),
+                                                        TableColumn(name: "name", valueType: String.self, isPrimaryKey: true),
                                                         TableColumn(name: "createdAt", valueType: Date?.self),
                                                         ForeignKeyColumn(name: "otherThing", valueType: BlankThing.self, sourceColumn: "id", targetColumn: "blank_thing_id")
                                                 ] }()

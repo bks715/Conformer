@@ -96,7 +96,16 @@ public struct SupamodeledMacro: ConformanceMacro, MemberMacro {
     }
     
     private static func createTable(_ tableName: String, _ elements: [TableColumnParser] ) -> String {
-        let primaryKeys = elements.map { $0.isPrimaryKey }
+        let primaryKeys = elements.filter{ $0.isPrimaryKey == true }
+        let primaryKeyStatements: String = primaryKeys.enumerated().reduce("t.primaryKey([", { string, columnItem in
+            let (index, column) = columnItem
+            let comma = index == (primaryKeys.count - 1) ? "" : ","
+            guard column.isForeignKey == nil, let name = column.name else { return "" }
+            return  """
+                \(string) "\(name)"\(comma)
+                """
+        })
+        
         let creationStatements: [String] = elements.compactMap({ column in
             guard let name = column.name, let valueType = column.valueType, let grdbType = column.grdbType else { return nil }
             let isOptional = valueType.contains("?") ? "" : ".notNull()"
@@ -104,19 +113,23 @@ public struct SupamodeledMacro: ConformanceMacro, MemberMacro {
                 //Actually Handle Foreign Key Here
                 guard let sourceColumn = column.sourceColumn, let sourceName = column.sourceName, let targetColumn = column.targetColumn else { return nil }
                 return """
-                            t.create(\(targetColumn), .text)
-                                .references(\(sourceName), column: \(sourceColumn), onDelete: .cascade)
+                            t.create("\(targetColumn)", .text)
+                                .references("\(sourceName)", column: "\(sourceColumn)", onDelete: .cascade)
                     """
             }else{
-                return "        t.create(\(name), \(grdbType))\(isOptional)"
+                return """
+                            t.create("\(name)", \(grdbType))\(isOptional)
+                       """
             }
         })
+        
         return """
             func createTable(_ db: Database) throws {
                 try db.create(table: \(tableName){ t in
                     //Add the Columns
                     \(creationStatements.joined(separator: "\n"))
                     //Add the Primary Keys
+                    \(primaryKeyStatements)])
                     //
                 }
             }
