@@ -55,7 +55,10 @@ public struct SupamodeledMacro: ConformanceMacro, MemberMacro {
             switch individualType{
             case "ForeignKeyColumn":
                 if let name = tableColumn.name, let valueType = tableColumn.valueType, let targetColumn = tableColumn.targetColumn{
-                    return "static let \(name) = hasMany(\(valueType).self)\nvar \(targetColumn): String?"
+                    return """
+                    static let \(name) = hasMany(\(valueType).self)
+                    var \(targetColumn): String?
+                """
                 }
             default:
                 if let name = tableColumn.name, let valueType = tableColumn.valueType{
