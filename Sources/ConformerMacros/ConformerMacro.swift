@@ -77,6 +77,7 @@ public struct SupamodeledMacro: ConformanceMacro, MemberMacro {
                 \n
                 \(raw: createTable(tableName, tableColumns))
                 \n
+                \(raw: createRemoteFetchRequest(name: tableName))
                 """
         ]
     }
@@ -140,8 +141,13 @@ public struct SupamodeledMacro: ConformanceMacro, MemberMacro {
             """
     }
     
-    private func createTableCreationLine() -> String {
-        return ""
+    private static func createRemoteFetchRequest(name: String) -> String {
+        return """
+                static func fetchFromRemote(_ client: SupabaseClient) async throws -> [Self]{
+                    let data: [\(name)] = try await client.sbDatabase.from(Self.tableName).select().eq(column: "is_deleted", value: false).execute()
+                    return data
+                }
+        """
     }
     
     //Make a camel case to snake case function
