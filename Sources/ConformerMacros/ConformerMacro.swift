@@ -93,7 +93,7 @@ public struct SupamodeledMacro: ConformanceMacro, MemberMacro {
             
         }
         return """
-                enum CodingKeys: CodingKey {
+                enum CodingKeys: String, CodingKey {
                     \(codingKeys.joined(separator: "\n    "))
                     case isDeleted = "is_deleted"
                     case updatedAt = "updated_at"
@@ -119,23 +119,23 @@ public struct SupamodeledMacro: ConformanceMacro, MemberMacro {
                 //Actually Handle Foreign Key Here
                 guard let sourceColumn = column.sourceColumn, let sourceName = column.sourceName, let targetColumn = column.targetColumn else { return nil }
                 return """
-                            t.create("\(targetColumn.camelToSnakeCase)", .text)
-                                .references("\(sourceName.camelToSnakeCase)", column: "\(sourceColumn.camelToSnakeCase)", onDelete: .cascade)
+                       t.column("\(targetColumn.camelToSnakeCase)", .text)
+                            .references("\(sourceName.camelToSnakeCase)", column: "\(sourceColumn.camelToSnakeCase)", onDelete: .cascade)
                     """
             }else{
                 return """
-                            t.create("\(name.camelToSnakeCase)", \(grdbType))\(isOptional)
+                       t.column("\(name.camelToSnakeCase)", \(grdbType))\(isOptional)
                        """
             }
         })
         
         return """
             static func createTable(_ db: Database) throws {
-                try db.create(table: \(tableName.camelToSnakeCase){ t in
+                try db.create(table: \(tableName.camelToSnakeCase)){ t in
                     //Add the Columns
-                    \(creationStatements.joined(separator: "\n"))
+                    \(creationStatements.joined(separator: "\n  "))
                     //Add the Primary Keys
-                    \(primaryKeyStatements)])
+                    \(primaryKeys.isEmpty ? "" : primaryKeyStatements)])
                     //
                 }
             }
@@ -144,10 +144,10 @@ public struct SupamodeledMacro: ConformanceMacro, MemberMacro {
     
     private static func createRemoteFetchRequest(name: String) -> String {
         return """
-            static func fetchFromRemote(_ client: SupabaseClient) async throws -> [Self]{
-                let data: [Self] = try await client.sbDatabase.from(Self.tableName).select().eq(column: "is_deleted", value: false).execute()
-                return data
-            }
+                static func fetchFromRemote(_ client: SupabaseClient) async throws -> [Self]{
+                    let data: [Self] = try await client.sbDatabase.from(tableName).select().eq(column: "is_deleted", value: false).execute().value
+                    return data
+                }
         """
     }
     
