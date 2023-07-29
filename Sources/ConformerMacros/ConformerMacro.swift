@@ -55,11 +55,11 @@ public struct SupamodeledMacro: ConformanceMacro, MemberMacro {
             switch individualType{
             case "ForeignKeyColumn":
                 if let targetColumn = tableColumn.targetColumn{
-                    return "var \(targetColumn): String?"
+                    return "public var \(targetColumn): String?"
                 }
             default:
                 if let name = tableColumn.name, let valueType = tableColumn.valueType{
-                    return "var \(name): \(valueType)"
+                    return "public var \(name): \(valueType)"
                 }
             }
             return ""
@@ -67,7 +67,7 @@ public struct SupamodeledMacro: ConformanceMacro, MemberMacro {
         
         let staticVars = tableColumns.filter({$0.isForeignKey == true }).map{ tableColumn in
             if let name = tableColumn.name, let valueType = tableColumn.valueType{
-                return "static let \(name) = hasMany(\(valueType).self)"
+                return "public static let \(name) = hasMany(\(valueType).self)"
             }
             return ""
         }
@@ -77,8 +77,8 @@ public struct SupamodeledMacro: ConformanceMacro, MemberMacro {
         return [
                 """
                 \(raw: variables.joined(separator: "\n"))
-                var isDeleted: Bool = false
-                var updatedAt: Date?
+                public var isDeleted: Bool = false
+                public var updatedAt: Date?
                 \(raw: staticVars.joined(separator: "\n"))
                 \n
                 \(raw: conformToCodable(tableColumns))
@@ -107,7 +107,7 @@ public struct SupamodeledMacro: ConformanceMacro, MemberMacro {
             
         }
         return """
-                enum CodingKeys: String, CodingKey {
+                public enum CodingKeys: String, CodingKey {
                     \(codingKeys.joined(separator: "\n    "))
                     case isDeleted = "is_deleted"
                     case updatedAt = "updated_at"
@@ -144,7 +144,7 @@ public struct SupamodeledMacro: ConformanceMacro, MemberMacro {
         })
         
         return """
-            static func createTable(_ db: Database) throws {
+            public static func createTable(_ db: Database) throws {
                 try db.create(table: \(tableName.camelToSnakeCase)){ t in
                     //Add the Columns
                     \(creationStatements.joined(separator: "\n  "))
@@ -158,7 +158,7 @@ public struct SupamodeledMacro: ConformanceMacro, MemberMacro {
     
     private static func createRemoteFetchRequest(name: String) -> String {
         return """
-                static func fetchFromRemote(_ client: SupabaseClient) async throws -> [Self]{
+                public static func fetchFromRemote(_ client: SupabaseClient) async throws -> [Self]{
                     let data: [Self] = try await client.sbDatabase.from(tableName).select().eq(column: "is_deleted", value: false).execute().value
                     return data
                 }
