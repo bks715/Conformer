@@ -97,6 +97,7 @@ public struct SupamodeledMacro: ConformanceMacro, MemberMacro {
                     \(codingKeys.joined(separator: "\n    "))
                     case isDeleted = "is_deleted"
                     case updatedAt = "updated_at"
+                }
                 """
     }
     
@@ -143,10 +144,10 @@ public struct SupamodeledMacro: ConformanceMacro, MemberMacro {
     
     private static func createRemoteFetchRequest(name: String) -> String {
         return """
-                static func fetchFromRemote(_ client: SupabaseClient) async throws -> [Self]{
-                    let data: [\(name)] = try await client.sbDatabase.from(Self.tableName).select().eq(column: "is_deleted", value: false).execute()
-                    return data
-                }
+            static func fetchFromRemote(_ client: SupabaseClient) async throws -> [Self]{
+                let data: [Self] = try await client.sbDatabase.from(Self.tableName).select().eq(column: "is_deleted", value: false).execute()
+                return data
+            }
         """
     }
     
