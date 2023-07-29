@@ -32,6 +32,10 @@ public struct SupamodeledMacro: ConformanceMacro, MemberMacro {
     
     public static func expansion(of node: AttributeSyntax, providingMembersOf declaration: some DeclGroupSyntax, in context: some MacroExpansionContext) throws -> [DeclSyntax] {
             let structDecl = declaration.cast(StructDeclSyntax.self)
+        
+        guard let tableName = structDecl.memberBlock.members.first(where: {
+            $0.decl.as(VariableDeclSyntax.self)?.bindings.first?.pattern.as(IdentifierPatternSyntax.self)?.identifier.text == "tableName"
+        })?.decl.as(VariableDeclSyntax.self)?.bindings.first?.initializer?.value.description else { return [""] }
             
         guard let columnMembers = structDecl.memberBlock.members.first(where: {$0.decl.as(VariableDeclSyntax.self)?.bindings.first?.pattern.as(IdentifierPatternSyntax.self)?.identifier.text == "columns" }),
               let columns = columnMembers.decl.as(VariableDeclSyntax.self)?.bindings.first?.initializer?.value.as(FunctionCallExprSyntax.self)?.calledExpression.as(ClosureExprSyntax.self)?.statements,
@@ -39,32 +43,23 @@ public struct SupamodeledMacro: ConformanceMacro, MemberMacro {
         else {
             return ["MARK: Add the variable columns to your struct. var columns: [any TableColumnProtocol] = [* Add Each Column in your table to the array *]"]
         }
-        var newVariables: [(name: String,type: String)] = []
+        var tableColumns: [TableColumnParser] = []
         //MARK: Add Variables to Code
         let variables = elements.compactMap{ element in
             guard let individualElement = element.expression.as(FunctionCallExprSyntax.self),
-                  let individualType = individualElement.calledExpression.as(IdentifierExprSyntax.self)?.identifier.text,
-                  let argumentList = element.expression.as(FunctionCallExprSyntax.self)?.argumentList,
-                  let name = argumentList.first?.expression.as(StringLiteralExprSyntax.self)?.segments.first?.as(StringSegmentSyntax.self)?.content.text,
-                  let valueDecl = argumentList.first(where: {$0.label?.text == "valueType"})?.expression.as(MemberAccessExprSyntax.self)?.base
+                  let individualType = individualElement.calledExpression.as(IdentifierExprSyntax.self)?.identifier.text
             else { return "" }
+            let tableColumn = TableColumnParser(individualElement.argumentList)
+            tableColumns.append(tableColumn)
             //Check if the Column is Foreign Key or Normal
             switch individualType{
             case "ForeignKeyColumn":
-                if let value = valueDecl.as(IdentifierExprSyntax.self)?.identifier.text{
-//                    newVariables.append((name: name, type: value))
-                    return "static let \(name) = hasMany(\(value).self)"
-                }else if let value = valueDecl.as(OptionalChainingExprSyntax.self)?.expression.as(IdentifierExprSyntax.self)?.identifier.text{
-//                    newVariables.append((name: name, type: value))
-                    return "static let \(name) = hasMany(\(value).self)"
+                if let name = tableColumn.name, let valueType = tableColumn.valueType{
+                    return "static let \(name) = hasMany(\(valueType).self)"
                 }
             default:
-                if let value = valueDecl.as(IdentifierExprSyntax.self)?.identifier.text{
-                    newVariables.append((name: name, type: value))
-                    return "var \(name): \(value)"
-                }else if let value = valueDecl.as(OptionalChainingExprSyntax.self)?.expression.as(IdentifierExprSyntax.self)?.identifier.text{
-                    newVariables.append((name: name, type: value))
-                    return "var \(name): \(value)"
+                if let name = tableColumn.name, let valueType = tableColumn.valueType{
+                    return "var \(name): \(valueType)"
                 }
             }
             return ""
@@ -75,29 +70,122 @@ public struct SupamodeledMacro: ConformanceMacro, MemberMacro {
         return [
                 """
                 \(raw: variables.joined(separator: "\n"))
-                \(raw: columnMembers.decl.debugDescription)
-                \n\n
-                \(raw: conformToCodable(newVariables))
+                \n
+                \(raw: conformToCodable(tableColumns))
+                \n
+                \(raw: createTable(tableName, tableColumns))
+                \n
                 """
         ]
     }
     
-    private static func conformToCodable(_ elements: [(name: String, type: String)]) -> String {
+    private static func conformToCodable(_ elements: [TableColumnParser] ) -> String {
         var codingKeys: [String] = []
         for element in elements{
             //Create Coding Keys
-            codingKeys.append(element.name)
+            guard let name = element.name else { continue }
+            codingKeys.append(name)
             //Encode
             //Decode
             
         }
         return """
                 enum CodingKeys: CodingKey {
-                    \(codingKeys.joined(separator: ", "))
+                    case: \(codingKeys.joined(separator: ", "))
                 """
     }
     
+    private static func createTable(_ tableName: String, _ elements: [TableColumnParser] ) -> String {
+        let primaryKeys = elements.map { $0.isPrimaryKey }
+        let creationStatements: [String] = elements.compactMap({ column in
+            guard let name = column.name, let valueType = column.valueType, let grdbType = column.grdbType else { return nil }
+            let isOptional = valueType.contains("?") ? "" : ".notNull()"
+            if column.isForeignKey == true {
+                //Actually Handle Foreign Key Here
+                guard let sourceColumn = column.sourceColumn, let sourceName = column.sourceName, let targetColumn = column.targetColumn else { return nil }
+                return """
+                            t.create(\(targetColumn), .text)
+                                .references(\(sourceName), column: \(sourceColumn), onDelete: .cascade)
+                    """
+            }else{
+                return "        t.create(\(name), \(grdbType))\(isOptional)"
+            }
+        })
+        return """
+            func createTable(_ db: Database) throws {
+                try db.create(table: \(tableName){ t in
+                    //Add the Columns
+                    \(creationStatements.joined(separator: "\n"))
+                    //Add the Primary Keys
+                    //
+                }
+            }
+            """
+    }
+    
+    private func createTableCreationLine() -> String {
+        return ""
+    }
+    
 }
+
+struct TableColumnParser {
+    
+    var name: String?
+    var valueType: String?
+    var isForeignKey: Bool?
+    var isPrimaryKey: Bool?
+    var sourceName: String?
+    var sourceColumn: String?
+    var targetColumn: String?
+    
+    init(_ node: TupleExprElementListSyntax) {
+        for element in node{
+            let label = element.label?.text
+            if label == "name", let stringLiteralExpr = element.expression.as(StringLiteralExprSyntax.self){
+                self.name = stringLiteralExpr.segments.first?.as(StringSegmentSyntax.self)?.content.text
+            } else if label == "valueType", let memberAccessExpr = element.expression.as(MemberAccessExprSyntax.self) {
+                self.valueType = memberAccessExpr.base?.description
+            } else if label == "isPrimaryKey", let booleanLiteralExpr = element.expression.as(BooleanLiteralExprSyntax.self) {
+                self.isPrimaryKey = booleanLiteralExpr.booleanLiteral.text == "true"
+            }else if label == "sourceColumn", let expression = element.expression.as(StringLiteralExprSyntax.self) {
+                self.isForeignKey = true
+                self.sourceColumn = expression.segments.description
+                self.sourceName = valueType
+            }else if label == "targetColumn", let expression = element.expression.as(StringLiteralExprSyntax.self) {
+                self.targetColumn = expression.segments.description
+            }
+        }
+        
+    }
+}
+//MARK: GRDB Data Type Mapping -
+extension TableColumnParser {
+    
+    var grdbType: String? {
+        let valueType = valueType?.filter({ $0 != "?" })
+        switch valueType {
+           case "String":
+               return "Database.ColumnType.text"
+           case "Int", "Int64":
+               return "Database.ColumnType.integer"
+           case "Double":
+               return "Database.ColumnType.double"
+           case "Float":
+               return "Database.ColumnType.real" // REAL is a floating-point value
+           case "Bool":
+               return "Database.ColumnType.boolean"
+           case "Data":
+               return "Database.ColumnType.blob"
+           case "Date":
+               return "Database.ColumnType.datetime" // or datetime, if you're storing date and time
+           default:
+               return "Database.ColumnType.any" // fallback type
+           }
+    }
+    
+}
+
 
 @main
 struct ConformerPlugin: CompilerPlugin {
