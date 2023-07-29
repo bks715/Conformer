@@ -69,17 +69,32 @@ public struct SupamodeledMacro: ConformanceMacro, MemberMacro {
             }
             return ""
         }
+        //First we add the variables for each of the table's standard columns
+        //Then we add the static variables for the foreign key columns
+        //Then we add things to conform to codable... Coding Keys, encode method, init from decoder
         return [
                 """
                 \(raw: variables.joined(separator: "\n"))
                 \(raw: columnMembers.decl.debugDescription)
+                \n\n
+                \(raw: conformToCodable(newVariables))
                 """
         ]
     }
     
-    private static func conformToCodable(_ elements: MemberDeclListSyntax.Element) -> String {
-        
-        return ""
+    private static func conformToCodable(_ elements: [(name: String, type: String)]) -> String {
+        var codingKeys: [String] = []
+        for element in elements{
+            //Create Coding Keys
+            codingKeys.append(element.name)
+            //Encode
+            //Decode
+            
+        }
+        return """
+                enum CodingKeys: CodingKey {
+                    \(codingKeys.joined(separator: ", "))
+                """
     }
     
 }
