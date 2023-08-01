@@ -80,7 +80,6 @@ public struct SupamodeledMacro: ConformanceMacro, MemberMacro {
                 \(raw: variables.joined(separator: "\n"))
                 public var isDeleted: Bool = false
                 public var updatedAt: Date?
-                \(raw: staticVars.joined(separator: "\n"))
                 \n
                 \(raw: conformToCodable(tableColumns))
                 \n
