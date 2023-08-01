@@ -76,6 +76,7 @@ public struct SupamodeledMacro: ConformanceMacro, MemberMacro {
         //Then we add things to conform to codable... Coding Keys, encode method, init from decoder
         return [
                 """
+                public static let databaseTableName = "\(tableName.camelToSnakeCase)"
                 \(raw: variables.joined(separator: "\n"))
                 public var isDeleted: Bool = false
                 public var updatedAt: Date?
@@ -145,7 +146,7 @@ public struct SupamodeledMacro: ConformanceMacro, MemberMacro {
         
         return """
             public static func createTable(_ db: Database) throws {
-                try db.create(table: \(tableName.snakeToCamelCase.capitalized)){ t in
+                try db.create(table: \(tableName.camelToSnakeCase)){ t in
                     //Add the Columns
                     \(creationStatements.joined(separator: "\n  "))
                     //Add isDeleted and updatedAt
