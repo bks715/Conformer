@@ -12,7 +12,9 @@ extension String {
     var camelToSnakeCase: String {
         var newString = ""
         for (n,char) in self.enumerated(){
-            if char.isUppercase && n != 0{
+            if char.isUppercase && n == 0{
+                newString.append(char.lowercased())
+            }else if char.isUppercase{
                 newString.append("_")
                 newString.append(char.lowercased())
             }else{
