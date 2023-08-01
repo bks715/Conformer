@@ -145,9 +145,12 @@ public struct SupamodeledMacro: ConformanceMacro, MemberMacro {
         
         return """
             public static func createTable(_ db: Database) throws {
-                try db.create(table: \(tableName.camelToSnakeCase)){ t in
+                try db.create(table: \(tableName.snakeToCamelCase)){ t in
                     //Add the Columns
                     \(creationStatements.joined(separator: "\n  "))
+                    //Add isDeleted and updatedAt
+                    t.column("updated_at", Database.ColumnType.datetime)
+                    t.column("is_deleted", Database.ColumnType.boolean).notNull()
                     //Add the Primary Keys
                     \(primaryKeys.isEmpty ? "" : primaryKeyStatements)])
                     //

@@ -22,4 +22,22 @@ extension String {
         return newString
     }
     
+    var snakeToCamelCase: String {
+        var newString = ""
+        var capitalizeNext = false
+        for char in self{
+            if char == "_"{
+                capitalizeNext = true
+            }else{
+                if capitalizeNext{
+                    newString.append(char.uppercased())
+                    capitalizeNext = false
+                }else{
+                    newString.append(char)
+                }
+            }
+        }
+        return newString
+    }
+    
 }
