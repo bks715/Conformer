@@ -76,7 +76,7 @@ public struct SupamodeledMacro: ConformanceMacro, MemberMacro {
         //Then we add things to conform to codable... Coding Keys, encode method, init from decoder
         return [
                 """
-                public static let databaseTableName = "\(raw: tableName.camelToSnakeCase)"
+                public static let databaseTableName = \(raw: tableName.camelToSnakeCase)
                 \(raw: variables.joined(separator: "\n"))
                 public var isDeleted: Bool = false
                 public var updatedAt: Date?
