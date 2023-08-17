@@ -7,11 +7,8 @@ import SwiftSyntaxMacros
 public struct SupamodeledMacro: ExtensionMacro, MemberMacro {
     
     public static func expansion(of node: SwiftSyntax.AttributeSyntax, attachedTo declaration: some SwiftSyntax.DeclGroupSyntax, providingExtensionsOf type: some SwiftSyntax.TypeSyntaxProtocol, conformingTo protocols: [SwiftSyntax.TypeSyntax], in context: some SwiftSyntaxMacros.MacroExpansionContext) throws -> [SwiftSyntax.ExtensionDeclSyntax] {
-        [.init(extendedType: type, memberBlock: declaration.memberBlock)]
-    }
-    
-    public static func expansion(of node: AttributeSyntax, providingConformancesOf declaration: some DeclGroupSyntax, in context: some MacroExpansionContext) throws -> [(TypeSyntax, GenericWhereClauseSyntax?)] {
-        [("Codable, SupaModel", nil)]
+        precondition(protocols.count == 0, "\(protocols)")
+        return []
     }
     
     public static func expansion(of node: AttributeSyntax, providingMembersOf declaration: some DeclGroupSyntax, in context: some MacroExpansionContext) throws -> [DeclSyntax] {
@@ -31,9 +28,9 @@ public struct SupamodeledMacro: ExtensionMacro, MemberMacro {
         //MARK: Add Variables to Code
         let variables = elements.compactMap{ element in
             guard let individualElement = element.expression.as(FunctionCallExprSyntax.self),
-                  let individualType = individualElement.calledExpression.as(IdentifierExprSyntax.self)?.identifier.text
+                  let individualType = individualElement.calledExpression.as(DeclReferenceExprSyntax.self)?.baseName.text
             else { return "" }
-            let tableColumn = TableColumnParser(individualElement.argumentList)
+            let tableColumn = TableColumnParser(individualElement.arguments)
             tableColumns.append(tableColumn)
             //Check if the Column is Foreign Key or Normal
             switch individualType{
