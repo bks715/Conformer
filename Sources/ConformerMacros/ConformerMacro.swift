@@ -4,18 +4,7 @@ import SwiftSyntaxBuilder
 import SwiftSyntaxMacros
 
 
-public struct SupamodeledMacro: ExtensionMacro, MemberMacro {
-    
-    public static func expansion(
-        of node: AttributeSyntax,
-        attachedTo declaration: some DeclGroupSyntax,
-        providingExtensionsOf type: some TypeSyntaxProtocol,
-        conformingTo protocols: [TypeSyntax],
-        in context: some MacroExpansionContext
-      ) throws -> [ExtensionDeclSyntax] {
-        let codableExtension = try ExtensionDeclSyntax("extension \(type): Codable, SupaModel") {}
-        return [codableExtension]
-      }
+public struct SupamodeledMacro: MemberMacro {
     
     public static func expansion(of node: AttributeSyntax, providingMembersOf declaration: some DeclGroupSyntax, in context: some MacroExpansionContext) throws -> [DeclSyntax] {
         let structDecl = declaration.cast(StructDeclSyntax.self)
