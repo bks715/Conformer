@@ -110,7 +110,7 @@ public struct SupamodeledMacro: MemberMacro {
                 guard let sourceColumn = column.sourceColumn, let sourceName = column.sourceName, let targetColumn = column.targetColumn else { return nil }
                 return """
                        t.column("\(targetColumn.camelToSnakeCase)", .text)
-                            .references("\(sourceName.camelToSnakeCase)", column: "\(sourceColumn.camelToSnakeCase)", onDelete: .cascade)
+                            .references("\(sourceName.camelToSnakeCase)", column: "\(sourceColumn.camelToSnakeCase)", onDelete: .cascade, deferred: true)
                     """
             }else{
                 return """
