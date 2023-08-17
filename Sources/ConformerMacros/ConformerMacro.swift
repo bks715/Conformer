@@ -13,7 +13,7 @@ public struct SupamodeledMacro: ExtensionMacro, MemberMacro {
         conformingTo protocols: [TypeSyntax],
         in context: some MacroExpansionContext
       ) throws -> [ExtensionDeclSyntax] {
-        let codableExtension = try ExtensionDeclSyntax("extension \(type): Codable, SupaModeled") {}
+        let codableExtension = try ExtensionDeclSyntax("extension \(type): Codable, SupaModel") {}
         return [codableExtension]
       }
     
