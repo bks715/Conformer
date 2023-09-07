@@ -96,7 +96,12 @@ public struct SupamodeledMacro: MemberMacro {
         let primaryKeyStatements: String = primaryKeys.enumerated().reduce("t.primaryKey([", { string, columnItem in
             let (index, column) = columnItem
             let comma = index == (primaryKeys.count - 1) ? "" : ","
-            guard column.isForeignKey == nil, let name = column.name else { return "" }
+            guard column.isForeignKey == nil, let name = column.name else {
+                guard let name = column.targetColumn else { return string }
+                return  """
+                    \(string) "\(name)"\(comma)
+                    """
+            }
             return  """
                 \(string) "\(name.camelToSnakeCase)"\(comma)
                 """
