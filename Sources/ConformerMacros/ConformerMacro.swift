@@ -31,7 +31,7 @@ public struct SupamodeledMacro: MemberMacro {
             switch individualType{
             case "ForeignKeyColumn":
                 if let targetColumn = tableColumn.targetColumn{
-                    return "public var \(targetColumn): String?"
+                    return "public var \(targetColumn): UUID?"
                 }
             default:
                 if let name = tableColumn.name, let valueType = tableColumn.valueType{
