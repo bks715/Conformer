@@ -143,8 +143,20 @@ public struct SupamodeledMacro: MemberMacro {
     private static func createRemoteFetchRequest(name: String) -> String {
         return """
                 public static func fetchFromRemote(_ client: SupabaseClient, lastUpdate: Date) async throws -> [Self]{
-                    let data: [Self] = try await client.database.from(tableName).select().greaterThanOrEquals(column: "updated_at", value: lastUpdate.ISO8601Format()).execute().value
-                    return data
+                                       let limit = 950
+                                       var rangeStart = 0
+                                       var rangeEnd = limit
+                                       var allData: [Self] = []
+                                       while true {
+                                           let data: [Self] = try await client.database.from(tableName).select().greaterThanOrEquals(column: "updated_at", value: lastUpdate.ISO8601Format()).range(from: rangeStart, to: rangeEnd).execute().value
+                                           allData.append(contentsOf: data)
+                                           rangeStart += limit
+                                           rangeEnd += limit
+                                           if data.count < limit {
+                                               break
+                                           }
+                                       }
+                                       return allData
                 }
         """
     }
